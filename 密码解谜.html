@@ -1,0 +1,466 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta charset="UTF-8">
+  <title>密码解谜</title>
+  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/howler/2.2.3/howler.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/particles.js/2.0.0/particles.min.js"></script>
+  <style>
+    body {
+      font-family: '微软雅黑', sans-serif;
+      background: linear-gradient(135deg, #0f0c29, #302b63, #24243e);
+      color: #eee;
+      padding: 30px;
+      overflow: hidden;
+      margin: 0;
+    }
+    #particles-js {
+      position: absolute;
+      width: 100%;
+      height: 100%;
+      top: 0;
+      left: 0;
+      z-index: -1;
+    }
+    #game {
+      max-width: 720px;
+      margin: 0 auto;
+      background: rgba(0,0,0,0.65);
+      padding: 30px;
+      border-radius: 20px;
+      box-shadow: 0 0 25px #0ff;
+      position: relative;
+    }
+    h1 {
+      font-size: 42px;
+      color: #00ffe0;
+      text-shadow: 0 0 12px #0ff;
+      margin-bottom: 25px;
+      text-align: center;
+    }
+    #musicControl {
+      position: absolute;
+      top: 15px;
+      right: 20px;
+      background: transparent;
+      border: none;
+      color: #0ff;
+      font-size: 26px;
+      cursor: pointer;
+    }
+    .section {
+      border: 1px solid #00ffe0;
+      border-radius: 10px;
+      padding: 20px;
+      margin-bottom: 20px;
+      background: rgba(0,0,0,0.5);
+      box-shadow: 0 0 8px #0ff inset;
+    }
+    #intro {
+      font-size: 16px;
+      color: #ccc;
+      line-height: 1.6;
+    }
+    #content {
+      font-size: 22px;
+      margin: 10px 0;
+      word-break: break-word;
+      color: #fff;
+    }
+    input, button {
+      padding: 12px 20px;
+      margin: 10px;
+      font-size: 18px;
+      border-radius: 8px;
+      border: none;
+      outline: none;
+    }
+    input {
+      width: 260px;
+    }
+    button {
+      background: #00ffe0;
+      color: #000;
+      cursor: pointer;
+      transition: all 0.3s;
+    }
+    button:hover {
+      background: #0ff;
+      transform: scale(1.05);
+    }
+    .hidden { display: none; }
+    #morseTableBtn {
+      background: #302b63;
+      color: #00ffe0;
+      border: 1px solid #00ffe0;
+      margin-left: 10px;
+      padding: 8px 12px;
+      font-size: 14px;
+      display: inline-block;
+    }
+    .level-indicator {
+      position: absolute;
+      top: 15px;
+      left: 20px;
+      background: rgba(0, 255, 224, 0.2);
+      padding: 5px 10px;
+      border-radius: 20px;
+      font-size: 14px;
+      border: 1px solid #00ffe0;
+    }
+    .glow {
+      animation: glow 1s ease-in-out;
+    }
+    @keyframes glow {
+      0% { box-shadow: 0 0 8px #0ff inset, 0 0 0 #0ff; }
+      50% { box-shadow: 0 0 8px #0ff inset, 0 0 30px #0ff; }
+      100% { box-shadow: 0 0 8px #0ff inset, 0 0 0 #0ff; }
+    }
+    .confetti {
+      position: fixed;
+      width: 100%;
+      height: 100%;
+      top: 0;
+      left: 0;
+      z-index: 1000;
+      pointer-events: none;
+    }
+  </style>
+</head>
+<body>
+  <div id="particles-js"></div>
+  <div id="game">
+    <div class="level-indicator">第 <span id="levelNum">1</span> 关 / 共 8 关</div>
+    <button id="musicControl" onclick="toggleMusic()">🎵</button>
+    <h1>🎮 密码解谜</h1>
+
+    <div class="section">
+      <h3 style="color:#0ff">密码类型 & 解题方法</h3>
+      <div id="intro"></div>
+    </div>
+
+    <div class="section" id="questionSection">
+      <h3 style="color:#0ff">当前题目</h3>
+      <div id="content"></div>
+    </div>
+
+    <input type="text" id="answer" class="hidden">
+    <button onclick="next()" id="nextBtn">开始游戏</button>
+  </div>
+
+  <script>
+    // 粒子背景配置
+    particlesJS("particles-js", {
+      "particles": {
+        "number": {
+          "value": 80,
+          "density": {
+            "enable": true,
+            "value_area": 800
+          }
+        },
+        "color": {
+          "value": "#00ffe0"
+        },
+        "shape": {
+          "type": "circle",
+          "stroke": {
+            "width": 0,
+            "color": "#000000"
+          },
+          "polygon": {
+            "nb_sides": 5
+          }
+        },
+        "opacity": {
+          "value": 0.5,
+          "random": false,
+          "anim": {
+            "enable": false,
+            "speed": 1,
+            "opacity_min": 0.1,
+            "sync": false
+          }
+        },
+        "size": {
+          "value": 3,
+          "random": true,
+          "anim": {
+            "enable": false,
+            "speed": 40,
+            "size_min": 0.1,
+            "sync": false
+          }
+        },
+        "line_linked": {
+          "enable": true,
+          "distance": 150,
+          "color": "#00ffe0",
+          "opacity": 0.4,
+          "width": 1
+        },
+        "move": {
+          "enable": true,
+          "speed": 2,
+          "direction": "none",
+          "random": false,
+          "straight": false,
+          "out_mode": "out",
+          "bounce": false,
+          "attract": {
+            "enable": false,
+            "rotateX": 600,
+            "rotateY": 1200
+          }
+        }
+      },
+      "interactivity": {
+        "detect_on": "canvas",
+        "events": {
+          "onhover": {
+            "enable": true,
+            "mode": "grab"
+          },
+          "onclick": {
+            "enable": true,
+            "mode": "push"
+          },
+          "resize": true
+        },
+        "modes": {
+          "grab": {
+            "distance": 140,
+            "line_linked": {
+              "opacity": 1
+            }
+          },
+          "bubble": {
+            "distance": 400,
+            "size": 40,
+            "duration": 2,
+            "opacity": 8,
+            "speed": 3
+          },
+          "repulse": {
+            "distance": 200,
+            "duration": 0.4
+          },
+          "push": {
+            "particles_nb": 4
+          },
+          "remove": {
+            "particles_nb": 2
+          }
+        }
+      },
+      "retina_detect": true
+    });
+
+    // 音效配置
+    const sounds = {
+       success: new Howl({ src: ['sound/mixkit-completion-of-a-level-2063.wav'] }),
+      fail: new Howl({ src: ['sound/wrong-answer-129254.mp3'] }),
+      click: new Howl({ src: ['sound/mixkit-video-game-treasure-2066.wav'] }),
+      bgMusic: new Howl({
+        src: ['sound/mixkit-to-the-next-round-1047.mp3'],
+        loop: true,
+        volume: 0.3
+      })
+    };
+
+    // 背景音乐自动播放
+    sounds.bgMusic.play();
+    let musicOn = true;
+    function toggleMusic() {
+      musicOn ? sounds.bgMusic.pause() : sounds.bgMusic.play();
+      document.getElementById('musicControl').textContent = musicOn ? '🔇' : '🎵';
+      musicOn = !musicOn;
+    }
+
+    // 多题目静态数组管理
+    const levels = [
+      {
+        q: "密文 'DWWDFN'（位移+3）",
+        a: "ATTACK",
+        intro: "【凯撒密码】将字母位移+3，例如A→D，B→E，解法是反向移3位。"
+      },
+      {
+        q: "摩斯电码解密：.... . .-.. .-.. ---",
+        a: "HELLO",
+        intro: "【摩斯电码】用'.'和'-'表示字母，点击下方按钮查看电码表。",
+        extra: "<button id='morseTableBtn' onclick='showMorseTable()'>查看摩斯电码表</button>"
+      },
+      {
+        q: "UOY ERA WOH",
+        a: "HOW ARE YOU",
+        intro: "【镜像密码】将整句字母顺序反转。"
+      },
+      {
+        q: "指定上一题答案中的最后一个字母",
+        a: "U",
+        intro: "【图书密码】通过指定书页、行数、单词位置传递信息。"
+      },
+      {
+        q: "如果 3★5=4，7★2=47，那么 9★4=?",
+        a: "77",
+        intro: "【特殊运算】按题目隐含规律：a★b = a×a + b 或其他规律，自行推算。"
+      },
+      {
+        q: "键盘密码：'W S W S A D D W' (QWERTY键盘，每字母代表其左侧的字母)",
+        a: "QAQAPSSQ",
+        intro: "【键盘密码】S左边是A，W左边是Q，D左边是S。"
+      },
+      {
+        q: "诗：芦花丛中一扁舟，俊杰俄从此地游。义士若能知此理，反躬难逃可无忧。",
+        a: "卢俊义反",
+        intro: "【藏头诗】将密码隐藏在诗句的首字、尾字或特定位置。"
+      },
+      {
+        q: "给定 p=3, q=11（n=33, φ(n)=20），公钥 e=3，密文 8。 给出明文（其中 3*7 ≡ 1 mod 20）",
+        a: "2",
+        intro: "【RSA 加密（非对称加密）】基于大数分解难题，使用 公钥加密、私钥解密。"
+      },
+    ];
+
+    let current = 0;
+
+    // 显示摩斯电码表
+    function showMorseTable() {
+      sounds.click.play();
+      Swal.fire({
+        title: '📜 摩斯电码表',
+        html: `
+          <div style="text-align:left; columns:2; column-gap:20px;">
+            <div><strong>字母/数字</strong></div><div><strong>电码</strong></div>
+            <div>A</div><div>.-</div>
+            <div>B</div><div>-...</div>
+            <div>C</div><div>-.-.</div>
+            <div>D</div><div>-..</div>
+            <div>E</div><div>.</div>
+            <div>F</div><div>..-.</div>
+            <div>G</div><div>--.</div>
+            <div>H</div><div>....</div>
+            <div>I</div><div>..</div>
+            <div>J</div><div>.---</div>
+            <div>K</div><div>-.-</div>
+            <div>L</div><div>.-..</div>
+            <div>M</div><div>--</div>
+            <div>N</div><div>-.</div>
+            <div>O</div><div>---</div>
+            <div>P</div><div>.--.</div>
+            <div>Q</div><div>--.-</div>
+            <div>R</div><div>.-.</div>
+            <div>S</div><div>...</div>
+            <div>T</div><div>-</div>
+            <div>U</div><div>..-</div>
+            <div>V</div><div>...-</div>
+            <div>W</div><div>.--</div>
+            <div>X</div><div>-..-</div>
+            <div>Y</div><div>-.--</div>
+            <div>Z</div><div>--..</div>
+            <div>1</div><div>.----</div>
+            <div>2</div><div>..---</div>
+            <div>3</div><div>...--</div>
+            <div>4</div><div>....-</div>
+            <div>5</div><div>.....</div>
+            <div>6</div><div>-....</div>
+            <div>7</div><div>--...</div>
+            <div>8</div><div>---..</div>
+            <div>9</div><div>----.</div>
+            <div>0</div><div>-----</div>
+          </div>
+        `,
+        confirmButtonColor: '#00ffe0',
+        width: '600px'
+      });
+    }
+
+    function createConfetti() {
+      const confetti = document.createElement('div');
+      confetti.className = 'confetti';
+      confetti.innerHTML = `
+        <canvas id="confetti-canvas" style="width:100%;height:100%"></canvas>
+      `;
+      document.body.appendChild(confetti);
+      
+      const canvas = document.getElementById('confetti-canvas');
+      const jsConfetti = new JSConfetti({ canvas });
+      jsConfetti.addConfetti({
+        emojis: ['🎉', '✨', '🎊', '🏆', '💎'],
+        emojiSize: 30,
+        confettiNumber: 60,
+      });
+      
+      setTimeout(() => {
+        confetti.remove();
+      }, 3000);
+    }
+
+    function next() {
+      const ansInput = document.getElementById('answer');
+      const nextBtn = document.getElementById('nextBtn');
+      const content = document.getElementById('content');
+      const intro = document.getElementById('intro');
+      const levelNum = document.getElementById('levelNum');
+      const questionSection = document.getElementById('questionSection');
+
+      sounds.click.play();
+
+      if (nextBtn.innerText === '开始游戏' || nextBtn.innerText === '下一关') {
+        content.innerHTML = levels[current].q + (levels[current].extra || "");
+        intro.innerText = levels[current].intro;
+        ansInput.classList.remove('hidden');
+        ansInput.value = '';
+        ansInput.focus();
+        nextBtn.innerText = '提交';
+        levelNum.textContent = current + 1;
+      } else if (nextBtn.innerText === '提交') {
+        const answer = ansInput.value.toUpperCase().trim();
+        if (answer === levels[current].a) {
+          sounds.success.play();
+          questionSection.classList.add('glow');
+          setTimeout(() => questionSection.classList.remove('glow'), 1000);
+          
+          Swal.fire({
+            icon: 'success',
+            title: '✅ 正确！',
+            text: '准备进入下一关！',
+            confirmButtonColor: '#00ffe0',
+            willClose: () => {
+              current++;
+              if (current < levels.length) {
+                nextBtn.innerText = '下一关';
+                next();
+              } else {
+                content.innerHTML = '🎉 恭喜你把所有题目都解出来了！';
+                intro.innerText = '';
+                ansInput.classList.add('hidden');
+                nextBtn.classList.add('hidden');
+                sounds.bgMusic.stop();
+                createConfetti();
+                Swal.fire({
+                  title: '🎉 全关完成！',
+                  html: '<img src="https://media1.giphy.com/media/v1.Y2lkPTc5MGI3NjExeDUyYngyMDI3M2lhNGExaWY1d3UwN2d5bnhtbTY0YzByb2gxOXZtbSZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/26ufnwz3wDUli7GU0/giphy.gif" style="max-width:100%;height:200px;margin:20px 0;"><br>你太厉害了！',
+                  confirmButtonColor: '#00ffe0'
+                });
+              }
+            }
+          });
+        } else {
+          sounds.fail.play();
+          Swal.fire({
+            icon: 'error',
+            title: '❌ 错误！',
+            text: '再试一次！',
+            confirmButtonColor: '#ff004c'
+          });
+        }
+      }
+    }
+  </script>
+  <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/js-confetti@0.11.0/dist/js-confetti.browser.js"></script>
+</body>
+</html>
